@@ -8,7 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { FormSection } from "@/components/FormSection";
 import { CounterInput } from "@/components/CounterInput";
+import { CustomCounterInput } from "@/components/CustomCounterInput";
 import { EquipmentChecklist } from "@/components/EquipmentChecklist";
+
+interface CustomMetric {
+  name: string;
+  value: number;
+}
 
 interface FormData {
   eventName: string;
@@ -21,6 +27,10 @@ interface FormData {
   endTime: string;
   peopleEngaged: number;
   bookings: number;
+  customMetric1: CustomMetric;
+  customMetric2: CustomMetric;
+  customMetric3: CustomMetric;
+  customMetric4: CustomMetric;
   selectedEquipment: string[];
   notes: string;
   success: string;
@@ -53,6 +63,10 @@ export const DeploymentForm = () => {
     endTime: "",
     peopleEngaged: 0,
     bookings: 0,
+    customMetric1: { name: "", value: 0 },
+    customMetric2: { name: "", value: 0 },
+    customMetric3: { name: "", value: 0 },
+    customMetric4: { name: "", value: 0 },
     selectedEquipment: [],
     notes: "",
     success: "",
@@ -81,11 +95,25 @@ export const DeploymentForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof FormData, value: string | number | string[]) => {
+  const handleInputChange = (field: keyof FormData, value: string | number | string[] | CustomMetric) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleCustomMetricNameChange = (metricKey: keyof FormData, name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [metricKey]: { ...(prev[metricKey] as CustomMetric), name }
+    }));
+  };
+
+  const handleCustomMetricValueChange = (metricKey: keyof FormData, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [metricKey]: { ...(prev[metricKey] as CustomMetric), value }
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,8 +131,59 @@ export const DeploymentForm = () => {
     setIsSubmitting(true);
     
     try {
-      // Simulate form submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare custom metrics - only include ones with names
+      const customMetrics: Record<string, any> = {};
+      [
+        { key: 'customMetric1', data: formData.customMetric1 },
+        { key: 'customMetric2', data: formData.customMetric2 },
+        { key: 'customMetric3', data: formData.customMetric3 },
+        { key: 'customMetric4', data: formData.customMetric4 },
+      ].forEach(({ key, data }, index) => {
+        if (data.name.trim()) {
+          customMetrics[`customMetric${index + 1}Name`] = data.name;
+          customMetrics[`customMetric${index + 1}Value`] = data.value;
+        }
+      });
+
+      // Prepare submission data
+      const submissionData = {
+        eventName: formData.eventName,
+        address: formData.address,
+        contact: formData.contact,
+        lead: formData.lead,
+        support: formData.support,
+        officer: formData.officer,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        peopleEngaged: formData.peopleEngaged,
+        bookings: formData.bookings,
+        ...customMetrics,
+        equipment: formData.selectedEquipment.join(", "),
+        notes: formData.notes,
+        success: formData.success,
+        improve: formData.improve,
+        actions: formData.actions,
+        timestamp: new Date().toISOString(),
+      };
+
+      // TODO: Replace this URL with your actual Google Apps Script deployment URL
+      const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+      
+      if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+        // Development mode - simulate submission
+        console.log("Form data to be submitted:", submissionData);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        // Production mode - submit to Google Apps Script
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(submissionData),
+        });
+      }
       
       toast({
         title: "Success!",
@@ -123,6 +202,10 @@ export const DeploymentForm = () => {
         endTime: "",
         peopleEngaged: 0,
         bookings: 0,
+        customMetric1: { name: "", value: 0 },
+        customMetric2: { name: "", value: 0 },
+        customMetric3: { name: "", value: 0 },
+        customMetric4: { name: "", value: 0 },
         selectedEquipment: [],
         notes: "",
         success: "",
@@ -130,6 +213,7 @@ export const DeploymentForm = () => {
         actions: "",
       });
     } catch (error) {
+      console.error("Submission error:", error);
       toast({
         title: "Error",
         description: "Failed to submit report. Please try again.",
@@ -318,6 +402,40 @@ export const DeploymentForm = () => {
                   value={formData.bookings}
                   onChange={(value) => handleInputChange("bookings", value)}
                 />
+                
+                <div className="mt-6 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                    Additional Metrics (Optional)
+                  </h3>
+                  <CustomCounterInput
+                    label="Custom Metric 1"
+                    metricName={formData.customMetric1.name}
+                    value={formData.customMetric1.value}
+                    onNameChange={(name) => handleCustomMetricNameChange("customMetric1", name)}
+                    onValueChange={(value) => handleCustomMetricValueChange("customMetric1", value)}
+                  />
+                  <CustomCounterInput
+                    label="Custom Metric 2"
+                    metricName={formData.customMetric2.name}
+                    value={formData.customMetric2.value}
+                    onNameChange={(name) => handleCustomMetricNameChange("customMetric2", name)}
+                    onValueChange={(value) => handleCustomMetricValueChange("customMetric2", value)}
+                  />
+                  <CustomCounterInput
+                    label="Custom Metric 3"
+                    metricName={formData.customMetric3.name}
+                    value={formData.customMetric3.value}
+                    onNameChange={(name) => handleCustomMetricNameChange("customMetric3", name)}
+                    onValueChange={(value) => handleCustomMetricValueChange("customMetric3", value)}
+                  />
+                  <CustomCounterInput
+                    label="Custom Metric 4"
+                    metricName={formData.customMetric4.name}
+                    value={formData.customMetric4.value}
+                    onNameChange={(name) => handleCustomMetricNameChange("customMetric4", name)}
+                    onValueChange={(value) => handleCustomMetricValueChange("customMetric4", value)}
+                  />
+                </div>
               </FormSection>
 
               <FormSection title="Checklist">
